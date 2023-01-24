@@ -124,7 +124,7 @@ Vec3<float> barycentric(Vec3<float> *pts, Vec3<float> p) {
     float alpha = surfaceX2(p, pts[1], pts[2]) / abcAire;
     float beta  = surfaceX2(p, pts[2], pts[0]) / abcAire;
     float gama  = surfaceX2(p, pts[0], pts[1]) / abcAire;
-    return {alpha, beta, gama};
+    return Vec3{alpha, beta, gama};
 }
 
 
@@ -139,7 +139,7 @@ void Draw::triangle(Vec3<float> *pts, TGAColor color) {
     }
     for (int x = (int)boxMin.x; x <= (int)boxMax.x; x++) {
         for (int y = (int)boxMin.y; y <= (int)boxMax.y; y++) {
-            Vec3<float> baryVal = barycentric(pts, {x+0.f, y+0.f, 0});
+            Vec3<float> baryVal = barycentric(pts, Vec3{x+0.f, y+0.f, 0.f});
             if(baryVal.x>=0 && baryVal.y>=0 && baryVal.z>=0){
                 framebuffer.set(x, y, color);
             }
@@ -162,7 +162,7 @@ void Draw::trianglezbuff(Vec3<float> *pts, Model &model, int faceIdx, float inte
     color = TGAColor(intensity * 255, intensity * 255, intensity * 255, 255);
     for (int x = (int)bboxmin.x; x<=(int)bboxmax.x; x++) {
         for (int y = (int)bboxmin.y; y<=(int)bboxmax.y; y++) {
-            Vec3<float> bc_screen  = barycentric(pts, {(float)x, (float)y, 0.f});
+            Vec3<float> bc_screen  = barycentric(pts, Vec3{(float)x, (float)y, 0.f});
             if (bc_screen.x<0 || bc_screen.y<0 || bc_screen.z<0) continue;
             float depth = 0;
             for (int i=0; i<3; i++) depth += pts[i][2]*bc_screen[i];
@@ -206,7 +206,7 @@ void Draw::flatshadingrainbow(Model &model){
         std::vector<Vec3<float>> face = model.getFacePoints(i);
         Vec3<float> screen_coords[3];
         for (int j = 0; j < 3; ++j) {
-            screen_coords[j] = {(face.at(j)[0]+1.f)*framebuffer.width()/2.f, (face.at(j)[1]+1.f)*framebuffer.height()/2.f, 0};
+            screen_coords[j] = Vec3{(face.at(j)[0]+1.f)*framebuffer.width()/2.f, (face.at(j)[1]+1.f)*framebuffer.height()/2.f, 0.f};
         }
         triangle(screen_coords, TGAColor(rand()%255, rand()%255, rand()%255, 255));
     }
@@ -218,7 +218,7 @@ void Draw::backfaceculling(Model &model){
         std::vector<Vec3<float>> face = model.getFacePoints(i);
         Vec3<float> screen_coords[3];
         for (int j = 0; j < 3; ++j) {
-            screen_coords[j] = {(face.at(j)[0]+1)*framebuffer.width()/2, (face.at(j)[1]+1)*framebuffer.height()/2, 0};
+            screen_coords[j] = Vec3{(face.at(j)[0]+1)*framebuffer.width()/2, (face.at(j)[1]+1)*framebuffer.height()/2, 0.f};
         }
         Vec3<float> n = (face.at(2)-face.at(0))^(face.at(1)-face.at(0));
         float intensity = n.normalize() * light_dir;
@@ -229,15 +229,26 @@ void Draw::backfaceculling(Model &model){
 }
 
 void Draw::zbufferized(Model &model, bool texturize){
-    framebuffer.set(0,0, TGAColor(255,255,255,255));
     for (int i = framebuffer.width()*framebuffer.height(); i--; zbuffer[i] = -std::numeric_limits<float>::max());
 
     for (int i = 0; i < model.nbFaces(); ++i) {
         std::vector<Vec3<float>> face = model.getFacePoints(i);
         Vec3<float> screen_coords[3];
+//        if(perspectives) {
+//            float c = 4.; //distance de la camera  sur l'axe z par rapport à l'origine
+//            for (int j = 0; j < 3; ++j) { //pour les formules voirs dernière partie lesson 4
+//                Vec4<float> embedPoint = {face.at(j)[0], face.at(j)[1], face.at(j)[2], 1};
+//                embedPoint[3] = 1 - embedPoint[2] / c;
+//                face[j] = {embedPoint[0] / embedPoint[3], embedPoint[1] / embedPoint[3], embedPoint[2] / embedPoint[3]};
+//            }
+//        }
         for (int j = 0; j < 3; ++j) {
-            screen_coords[j] = {(face.at(j)[0]+1.f)*framebuffer.width()/2.f, (face.at(j)[1]+1.f)*framebuffer.height()/2.f, face.at(j)[2]};
+            //screen_coords[j] = {(face.at(j)[0]+1.f)*framebuffer.width()/2.f, (face.at(j)[1]+1.f)*framebuffer.height()/2.f, face.at(j)[2]};
+            Matrix curr = {face[j]};
+            Matrix coords = viewPort*projection*modelView*curr;
+            screen_coords[j] = Vec3<float>(coords);
         }
+
         Vec3<float> n = (face.at(2)-face.at(0))^(face.at(1)-face.at(0));
         float intensity = n.normalize() * light_dir;
         if(intensity>0){
@@ -245,4 +256,36 @@ void Draw::zbufferized(Model &model, bool texturize){
         }
     }
 }
-//void getModelColor(TGAImage &img, )
+
+void Draw::lookat(Vec3<float> eye, Vec3<float> center, Vec3<float> up) {
+    Vec3<float> z = (eye-center).normalize();
+    Vec3<float> x = (up^z).normalize();
+    Vec3<float> y = (z^x).normalize();
+    Matrix Minv = Matrix::identity(4);
+    Matrix Tr   = Matrix::identity(4);
+    for (int i=0; i<3; i++) {
+        Minv[0][i] = x[i];
+        Minv[1][i] = y[i];
+        Minv[2][i] = z[i];
+        Tr[i][3] = -eye[i];
+    }
+    modelView = Minv*Tr;
+}
+
+void Draw::viewport(int x, int y, int w, int h) {
+    Matrix m = Matrix::identity(4);
+    m[0][3] = x+w/2.f;
+    m[1][3] = y+h/2.f;
+    m[2][3] = DEPTH/2.f;
+
+    m[0][0] = w/2.f;
+    m[1][1] = h/2.f;
+    m[2][2] = DEPTH/2.f;
+    viewPort = m;
+}
+
+void Draw::makeprojection(Vec3<float> eye, Vec3<float> center) {
+    Matrix m = Matrix::identity(4);
+    m[3][2] = -1.f/(eye-center).norm();
+    projection = m;
+}

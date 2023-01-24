@@ -58,6 +58,17 @@ int main() {
     framebuffer.write_tga_file("../rendu/zbufferized_textured.tga");
     clearbuffer(framebuffer);
 
-    */
+
+    //Lesson 4 Marche avec l'ajout de la camera (Lesson 5)
+    //draw.zbufferized(head_model, true, true);
+    //framebuffer.write_tga_file("../rendu/zbufferized_perspectives.tga");
+    //clearbuffer(framebuffer);
+
+     */
+
+    //Lesson 5
+    draw.zbufferized(head_model, true);
+    framebuffer.write_tga_file("../rendu/camera.tga");
+    clearbuffer(framebuffer);
     return 0;
 }

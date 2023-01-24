@@ -11,6 +11,8 @@
 #include <string>
 #include <cassert>
 
+class Matrix;
+
 template<typename T>
 struct Vec2 {
     T x;
@@ -60,6 +62,9 @@ struct Vec3 {
     T y;
     T z;
 
+    Vec3() = default;
+    Vec3(T u, T v, T w) : x(u), y(v), z(w){};
+    Vec3(Matrix &m);
     T& operator[](const int i)       { assert(i>=0 && i<3); return i ? (1==i ? y : z) : x; }
     T  operator[](const int i) const { assert(i>=0 && i<3); return i ? (1==i ? y : z) : x; }
 
@@ -98,7 +103,67 @@ struct Vec3 {
     operator std::string() {
         return "Vec3<...>(" + std::to_string(this->x) + ", " + std::to_string(this->y) + ", " + std::to_string(this->z) + ")";
     }
-    operator Vec2<T>() { return Vec2<T>{ x, y }; }
+    operator Vec3<T>() { return Vec3<T>{ x, y, z }; }
+};
+
+template<typename T>
+struct Vec4 {
+    T x;
+    T y;
+    T z;
+    T zz;
+
+    T& operator[](const int i)       { assert(i>=0 && i<4); return i ? (1==i ? y : (i == 2 ? z : zz) ) : x; }
+    T  operator[](const int i) const { assert(i>=0 && i<4); return i ? (1==i ? y : (i == 2 ? z : zz) ) : x; }
+
+    Vec4<T> scl(T x, T y, T z, T zz) {
+        return Vec4<T>{ this->x * x, this->y * y, this->z * z , this->zz * zz};
+    }
+
+    Vec4<T> normalize() {
+        float n = norm();
+        return Vec4<T>{ x/n, y/n, z/n , zz/n};
+    }
+
+    T norm() {
+        return std::sqrt(x*x + y*y + z*z + zz*zz);
+    }
+
+    T operator*(Vec4<T> o) {
+        return x*o.x + y*o.y + z*o.z + zz * o.zz;
+    }
+
+    Vec4<T> operator+(Vec4<T> o) {
+        return Vec4<T>{ x + o.x, y + o.y, z + o.z , zz+ o.zz};
+    }
+
+    Vec4<T> operator-(Vec4<T> o) {
+        return Vec4<T>{ x-o.x, y-o.y, z-o.z , zz-o.zz};
+    }
+
+
+    explicit operator std::string() {
+        return "Vec4<...>(" + std::to_string(this->x) + ", " + std::to_string(this->y) + ", " + std::to_string(this->z) + ", " + std::to_string(this->zz)+ ")";
+    }
+    operator Vec4<T>() { return Vec4<T>{ x, y , z, zz};
+    }
+};
+
+
+class Matrix {
+    std::vector<std::vector<float> > m;
+    int rows, cols;
+public:
+    Matrix(int r=4, int c=4);
+    Matrix(Vec3<float> v);
+    int nrows();
+    int ncols();
+    static Matrix identity(int dimensions);
+    std::vector<float>& operator[](const int i);
+    Matrix operator*(Matrix& a);
+    Matrix transpose();
+    Matrix inverse();
+    friend std::ostream& operator<<(std::ostream& s, Matrix& m);
 };
 
 #endif //PROJECT_GEOMETRY_H
