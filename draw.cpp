@@ -7,7 +7,7 @@
 #include "geometry.h"
 #include "model.h"
 
-void Draw::line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
+void Draw::line(int x0, int y0, int x1, int y1, TGAColor color) {
     // 1er
     /*
     for(float t = 0.; t < 1.; t+=.1){
@@ -97,9 +97,9 @@ void Draw::line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color)
     int y = y0;
     for (int x = x0; x <= x1; x++) {
         if (steep) {
-            image.set(y, x, color);
+            framebuffer.set(y, x, color);
         } else {
-            image.set(x, y, color);
+            framebuffer.set(x, y, color);
         }
         error3 += derror3;
         if (error3 > dx) {
@@ -110,8 +110,8 @@ void Draw::line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color)
 
 }
 
-void Draw::line(Vec2<int> t0, Vec2<int> t1, TGAImage &image, TGAColor color) {
-    line(t0[0], t0[1], t1[0], t1[1], image, color);
+void Draw::line(Vec2<int> t0, Vec2<int> t1, TGAColor color) {
+    line(t0[0], t0[1], t1[0], t1[1], color);
 }
 
 
@@ -196,7 +196,7 @@ void Draw::wireframe(Model &model, TGAColor &color){
             int y0 = (p0[1] + 1.) * ((float)framebuffer.height())/2;
             int x1 = (p1[0] + 1.) * ((float)framebuffer.width())/2;
             int y1 = (p1[1] + 1.) * ((float)framebuffer.height())/2;
-            line(x0, y0, x1, y1, framebuffer, color);
+            line(x0, y0, x1, y1, color);
         }
     }
 }
@@ -234,23 +234,11 @@ void Draw::zbufferized(Model &model, bool texturize){
     for (int i = 0; i < model.nbFaces(); ++i) {
         std::vector<Vec3<float>> face = model.getFacePoints(i);
         Vec3<float> screen_coords[3];
-//        if(perspectives) {
-//            float c = 4.; //distance de la camera  sur l'axe z par rapport à l'origine
-//            for (int j = 0; j < 3; ++j) { //pour les formules voirs dernière partie lesson 4
-//                Vec4<float> embedPoint = {face.at(j)[0], face.at(j)[1], face.at(j)[2], 1};
-//                embedPoint[3] = 1 - embedPoint[2] / c;
-//                face[j] = {embedPoint[0] / embedPoint[3], embedPoint[1] / embedPoint[3], embedPoint[2] / embedPoint[3]};
-//            }
-//        }
         for (int j = 0; j < 3; ++j) {
-            //screen_coords[j] = {(face.at(j)[0]+1.f)*framebuffer.width()/2.f, (face.at(j)[1]+1.f)*framebuffer.height()/2.f, face.at(j)[2]};
-            Matrix curr = {face[j]};
-            Matrix coords = viewPort*projection*modelView*curr;
-            screen_coords[j] = Vec3<float>(coords);
+            screen_coords[j] = getScreenCoords(face[j]);
         }
-
         Vec3<float> n = (face.at(2)-face.at(0))^(face.at(1)-face.at(0));
-        float intensity = n.normalize() * light_dir;
+        float intensity = n.normalize() * light_dir.normalize();
         if(intensity>0){
             trianglezbuff(screen_coords, model, i, intensity, texturize);
         }
@@ -288,4 +276,20 @@ void Draw::makeprojection(Vec3<float> eye, Vec3<float> center) {
     Matrix m = Matrix::identity(4);
     m[3][2] = -1.f/(eye-center).norm();
     projection = m;
+}
+
+void Draw::debug(){
+    Vec3 O = getScreenCoords({0,0,0});
+    Vec3 x = getScreenCoords({1,0,0});
+    Vec3 y = getScreenCoords({0,1,0});
+    Vec3 z = getScreenCoords({0,0,1});
+    line({static_cast<int>(O.x), static_cast<int>(O.y)}, {static_cast<int>(x.x), static_cast<int>(x.y)}, TGAColor{255, 0, 0, 255});
+    line({static_cast<int>(O.x), static_cast<int>(O.y)}, {static_cast<int>(y.x), static_cast<int>(y.y)}, TGAColor{0, 255, 0, 255});
+    line({static_cast<int>(O.x), static_cast<int>(O.y)}, {static_cast<int>(z.x), static_cast<int>(z.y)}, TGAColor{0, 0, 255, 255});
+}
+
+Vec3<float> Draw::getScreenCoords(Vec3<float> coords) {
+    Matrix mCoords{coords};
+    Matrix result = viewPort*projection*modelView*mCoords;
+    return (result);
 }

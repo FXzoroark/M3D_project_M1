@@ -24,7 +24,8 @@ int main() {
     TGAImage framebuffer{width, height, TGAImage::RGB};
     Draw draw{framebuffer};
     Model head_model{"../obj/african_head/african_head"};
-
+    Model diablo_model{"../obj/diablo3_pose/diablo3_pose"};
+    draw.debug();
     /*
 
     //Lesson 1
@@ -67,6 +68,7 @@ int main() {
      */
 
     //Lesson 5
+
     draw.zbufferized(head_model, true);
     framebuffer.write_tga_file("../rendu/camera.tga");
     clearbuffer(framebuffer);

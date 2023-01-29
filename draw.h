@@ -32,9 +32,9 @@ public:
         makeprojection(eye, center);
     }
 
-    void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color);
+    void line(int x0, int y0, int x1, int y1, TGAColor color);
 
-    void line(Vec2<int> t0, Vec2<int> t1, TGAImage &image, TGAColor color);
+    void line(Vec2<int> t0, Vec2<int> t1, TGAColor color);
 
     void trianglezbuff(Vec3<float> *pts, Model &model, int faceIdx, float intensity, bool texturized);
 
@@ -50,6 +50,10 @@ public:
     void lookat(Vec3<float> eye, Vec3<float> center, Vec3<float> up);
     void makeprojection(Vec3<float> eye, Vec3<float> center);
     void viewport(int x, int y, int w, int h);
+
+    void debug();
+    Vec3<float> getScreenCoords(Vec3<float> coords);
+
 };
 
 
